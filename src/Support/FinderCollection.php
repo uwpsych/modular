@@ -38,11 +38,26 @@ class FinderCollection
 	
 	public function inOrEmpty(string|array $dirs): static
 	{
-		try {
-			return $this->in($dirs);
-		} catch (DirectoryNotFoundException) {
-			return new static();
-		}
+		$dirs = (array) $dirs;
+
+        $expanded = [];
+
+        foreach ($dirs as $dir) {
+            if (strpbrk($dir, '*?[]') !== false) {
+                $matches = glob($dir, GLOB_ONLYDIR) ?: [];
+                $expanded = array_merge($expanded, $matches);
+            } else {
+                $expanded[] = $dir;
+            }
+        }
+
+        $existing = array_filter($expanded, static fn ($dir) => is_dir($dir));
+
+        if (empty($existing)) {
+            return new static();
+        }
+
+        return $this->in($existing);
 	}
 	
 	public function __call($name, $arguments)
